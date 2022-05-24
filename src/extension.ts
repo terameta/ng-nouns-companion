@@ -10,6 +10,18 @@ export function activate ( context: vscode.ExtensionContext ) {
 	// This line of code will only be executed once when your extension is activated
 	console.log( 'Congratulations, your extension "ng-nouns-companion" is now active!' );
 
+	vscode.window.showInformationMessage( 'Extension enabled' );
+
+	setTimeout( () => {
+		vscode.window.showInformationMessage( '10 seconds passed' );
+	}, 10000 );
+	setTimeout( () => {
+		vscode.window.showInformationMessage( '3 seconds passed' );
+	}, 3000 );
+	setTimeout( () => {
+		vscode.window.showInformationMessage( '1 second passed' );
+	}, 1000 );
+
 	// The command has been defined in the package.json file
 	// Now provide the implementation of the command with registerCommand
 	// The commandId parameter must match the command field in package.json
@@ -18,9 +30,13 @@ export function activate ( context: vscode.ExtensionContext ) {
 		// Display a message box to the user
 		vscode.window.showInformationMessage( 'Hello World from Angular Nouns Companion!' );
 	} );
-
-
 	context.subscriptions.push( disposable );
+
+	const suhDisposable = vscode.commands.registerCommand( 'ng-nouns-companion.startUpHappened', () => {
+		console.log( 'Startup happened function is now initiated' );
+		vscode.window.showInformationMessage( 'NG-Nouns Started!' );
+	} );
+	context.subscriptions.push( suhDisposable );
 }
 
 // this method is called when your extension is deactivated
