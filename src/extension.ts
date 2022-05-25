@@ -1,26 +1,24 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
+import { v4 as uuid } from 'uuid';
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 export function activate ( context: vscode.ExtensionContext ) {
 
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log( 'Congratulations, your extension "ng-nouns-companion" is now active!' );
+	const logChannel = vscode.window.createOutputChannel( 'Angular Nouns' );
 
-	vscode.window.showInformationMessage( 'Extension enabled' );
+	logChannel.appendLine( 'Extension enabled' );
+	logChannel.appendLine( vscode.Uri.name );
+	logChannel.show();
 
-	setTimeout( () => {
-		vscode.window.showInformationMessage( '10 seconds passed' );
-	}, 10000 );
-	setTimeout( () => {
-		vscode.window.showInformationMessage( '3 seconds passed' );
-	}, 3000 );
-	setTimeout( () => {
-		vscode.window.showInformationMessage( '1 second passed' );
-	}, 1000 );
+	// We will be able to use uuid in form of nonce
+	logChannel.appendLine( uuid() );
+
+	// This is how to show notification
+	// vscode.window.showInformationMessage( 'Extension enabled' );
+
 
 	// The command has been defined in the package.json file
 	// Now provide the implementation of the command with registerCommand
