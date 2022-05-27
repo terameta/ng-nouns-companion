@@ -14,7 +14,7 @@
 	],
 	"activationEvents": [
 		"workspaceContains:ng-nouns.json",
-		"onView:ngnc"
+		"onView:ngnouns.nounView"
 	],
 	"main": "./dist/extension.js",
 	"contributes": {
@@ -40,8 +40,9 @@
 		"views": {
 			"ng-nouns-companion": [
 				{
-					"id": "ngnc",
-					"name": "Angular Nouns Companion"
+					"id": "ngnouns.nounView",
+					"name": "Angular Nouns Companion",
+					"type": "webview"
 				}
 			]
 		}
