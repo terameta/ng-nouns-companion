@@ -26,6 +26,14 @@
 			{
 				"command": "ng-nouns-companion.startUpHappened",
 				"title": "StartUp Happened"
+			},
+			{
+				"command": "ng-nouns.setTNPKey",
+				"title": "Angular Nouns - Set The Noun Project Key"
+			},
+			{
+				"command": "ng-nouns.setTNPSecret",
+				"title": "Angular Nouns - Set The Noun Project Secret"
 			}
 		],
 		"viewsContainers": {

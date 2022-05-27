@@ -1,15 +1,45 @@
+let doCredentialsExist = false;
+const vscode = acquireVsCodeApi();
+
 const runAtStart = () => {
-	const vscode = acquireVsCodeApi();
 
-	console.log( 'Hello World!' );
+	vscode.postMessage( { type: 'initiate' } );
 
-	vscode.postMessage( { type: 'colorSelected', value: 'ABC' } );
+	window.addEventListener( 'message', event => {
+		const message = event.data;
+		vscode.postMessage( { type: 'logAppend', log: JSON.stringify( message ) } );
+		if ( message.type === 'credentialExistence' ) { credentialsChanged( message.exist ); }
+	} );
+
 
 	// setInterval( () => {
-	// 	vscode.postMessage( { type: 'colorSelected', value: 'interval happened' } );
-	// 	console.log( 'interval happened' );
+	// 	vscode.postMessage( { type: 'logAppend', log: doCredentialsExist } );
 	// }, 1000 );
+
+	document.querySelector( '#buttonClearCredentials' ).addEventListener( 'click', clearCredentials );
+	document.querySelector( '#buttonTNPCredentialsSubmit' ).addEventListener( 'click', saveCredentials );
+	document.querySelector( '#buttonAddSecret' ).addEventListener( 'click', addCredentialSecret );
 };
+
+const credentialsChanged = async ( payload ) => {
+	doCredentialsExist = !!payload;
+	vscode.postMessage( { type: 'logAppend', log: 'credentialsChanged' } );
+	vscode.postMessage( { type: 'logAppend', log: doCredentialsExist } );
+	if ( doCredentialsExist ) {
+		document.querySelector( '#credentialContainer' ).className = 'is-hidden';
+		document.querySelector( '#buttonClearCredentials' ).className = '';
+	} else {
+		document.querySelector( '#credentialContainer' ).className = '';
+		document.querySelector( '#buttonClearCredentials' ).className = 'is-hidden';
+	}
+};
+
+const saveCredentials = () => {
+	const key = document.querySelector( '#apiCredKey' ).value;
+	const secret = document.querySelector( '#apiCredSecret' ).value;
+	vscode.postMessage( { type: 'saveCredentials', values: { key, secret } } );
+};
+const clearCredentials = () => { vscode.postMessage( { type: 'clearCredentials' } ); };
 
 runAtStart();
 
