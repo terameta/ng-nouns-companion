@@ -67,6 +67,7 @@
 		"test": "node ./out/test/runTest.js"
 	},
 	"devDependencies": {
+		"@types/axios": "^0.14.0",
 		"@types/glob": "^7.2.0",
 		"@types/mocha": "^9.1.1",
 		"@types/node": "14.x",
@@ -85,6 +86,8 @@
 		"webpack-cli": "^4.9.2"
 	},
 	"dependencies": {
+		"axios": "^0.27.2",
+		"oauth-1.0a": "^2.2.6",
 		"uuid": "^8.3.2"
 	}
 }

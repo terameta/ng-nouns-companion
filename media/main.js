@@ -1,45 +1,101 @@
-let doCredentialsExist = false;
 const vscode = acquireVsCodeApi();
+
+const log = ( payload ) => {
+	let toLog = payload;
+	if ( typeof payload !== 'string' ) {
+		toLog = JSON.stringify( payload );
+	}
+	vscode.postMessage( { type: 'logAppend', log: toLog } );
+};
+
+let state = { credentials: { key: '', secret: '' } };
 
 const runAtStart = () => {
 
-	vscode.postMessage( { type: 'initiate' } );
+	state = vscode.getState() || state;
+	checkCredentials();
+	sendState();
 
 	window.addEventListener( 'message', event => {
 		const message = event.data;
-		vscode.postMessage( { type: 'logAppend', log: JSON.stringify( message ) } );
-		if ( message.type === 'credentialExistence' ) { credentialsChanged( message.exist ); }
+		// vscode.postMessage( { type: 'logAppend', log: JSON.stringify( message ) } );
+		if ( message.type === 'stateUpdate' ) { receiveState( message.state ); }
+		if ( message.type === 'searchResult' ) { searchResult( message.result ); }
 	} );
 
 
-	// setInterval( () => {
-	// 	vscode.postMessage( { type: 'logAppend', log: doCredentialsExist } );
+	// setInterval( async () => {
+	// 	try {
+	// 		const savedKey = Object.keys( vscode ).join( '|' );
+	// 		// const savedKey = await vscode.secrets.get( 'ng_nouns_the_noun_project_key' );
+	// 		vscode.postMessage( { type: 'logAppend', log: savedKey } );
+	// 	} catch ( error ) {
+	// 		vscode.postMessage( { type: 'logAppend', log: 'ERROR:' + JSON.stringify( error ) } );
+	// 	}
 	// }, 1000 );
 
 	document.querySelector( '#buttonClearCredentials' ).addEventListener( 'click', clearCredentials );
 	document.querySelector( '#buttonTNPCredentialsSubmit' ).addEventListener( 'click', saveCredentials );
-	document.querySelector( '#buttonAddSecret' ).addEventListener( 'click', addCredentialSecret );
+	document.querySelector( '#buttonSearchSVG' ).addEventListener( 'click', search );
 };
 
-const credentialsChanged = async ( payload ) => {
-	doCredentialsExist = !!payload;
-	vscode.postMessage( { type: 'logAppend', log: 'credentialsChanged' } );
-	vscode.postMessage( { type: 'logAppend', log: doCredentialsExist } );
-	if ( doCredentialsExist ) {
-		document.querySelector( '#credentialContainer' ).className = 'is-hidden';
-		document.querySelector( '#buttonClearCredentials' ).className = '';
+const checkCredentials = async () => {
+	if ( !!state.credentials.key && !!state.credentials.secret ) {
+		document.querySelector( '#credentialPending' ).className = 'is-hidden';
+		document.querySelector( '#credentialActive' ).className = '';
 	} else {
-		document.querySelector( '#credentialContainer' ).className = '';
-		document.querySelector( '#buttonClearCredentials' ).className = 'is-hidden';
+		document.querySelector( '#credentialPending' ).className = '';
+		document.querySelector( '#credentialActive' ).className = 'is-hidden';
 	}
 };
 
-const saveCredentials = () => {
+const search = async () => {
+	// const response = await fetch( 'https://reqres.in/api/users?page=2' );
+	// const data = await response.json();
+	const iconList = document.querySelector( '#icon-list' );
+	iconList.textContent = 'Searching, please wait';
+	vscode.postMessage( { type: 'search', query: 'users' } );
+};
+
+const searchResult = async ( payload ) => {
+	const iconListDiv = document.querySelector( '#icon-list' );
+	iconListDiv.textContent = '';
+	const icons = payload.icons;
+	for ( const icon of icons ) {
+		const iconDiv = document.createElement( 'div' );
+		iconDiv.className = 'box';
+		iconDiv.innerHTML = `<img src="${ icon.preview_url_84 }" />`;
+		iconListDiv.appendChild( iconDiv );
+		// log( icon.id );
+	}
+	// log( icons.length + '<<<<<' );
+};
+
+const saveCredentials = async () => {
 	const key = document.querySelector( '#apiCredKey' ).value;
 	const secret = document.querySelector( '#apiCredSecret' ).value;
-	vscode.postMessage( { type: 'saveCredentials', values: { key, secret } } );
+	// vscode.postMessage( { type: 'saveCredentials', values: { key, secret } } );
+	state.credentials = { key, secret };
+	await checkCredentials();
+	await sendState();
 };
-const clearCredentials = () => { vscode.postMessage( { type: 'clearCredentials' } ); };
+
+const clearCredentials = async () => {
+	vscode.postMessage( { type: 'clearCredentials' } );
+	state.credentials = { key: '', secret: '' };
+	await checkCredentials();
+	await sendState();
+};
+
+const receiveState = async ( payload ) => {
+	vscode.setState( payload );
+	state = payload;
+};
+
+const sendState = async () => {
+	vscode.setState( state );
+	vscode.postMessage( { type: 'stateUpdate', state } );
+};
 
 runAtStart();
 
