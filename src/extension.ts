@@ -12,18 +12,23 @@ export type Credentials = {
 	secret: string,
 };
 
+export type Settings = {
+	iconFile: string,
+};
+
 export type State = {
-	credentials: Credentials
+	credentials: Credentials,
+	settings: Settings,
 };
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
-export function activate ( context: vscode.ExtensionContext ) {
+export async function activate ( context: vscode.ExtensionContext ) {
 
 	const logChannel = vscode.window.createOutputChannel( 'Angular Nouns' );
 
 	logChannel.appendLine( 'Extension enabled' );
-	logChannel.appendLine( JSON.stringify( vscode.Uri ) );
+
 	logChannel.show();
 
 	// This is how to show notification
@@ -43,13 +48,8 @@ export function activate ( context: vscode.ExtensionContext ) {
 	// 	} )
 	// );
 
-	const settingsWatcher = vscode.workspace.createFileSystemWatcher( '**/*.json' );
 
-	settingsWatcher.onDidChange( uri => {
-		logChannel.appendLine( JSON.stringify( uri ) );
-	} );
-	settingsWatcher.onDidCreate( uri => { } ); // listen to files/folders being created
-	settingsWatcher.onDidDelete( uri => { } ); // listen to files/folders getting deleted
+	// logChannel.appendLine( JSON.stringify( vscode.workspace.workspaceFolders ) );
 
 	// // The command has been defined in the package.json file
 	// // Now provide the implementation of the command with registerCommand
@@ -71,6 +71,9 @@ export function activate ( context: vscode.ExtensionContext ) {
 class NounViewProvider implements vscode.WebviewViewProvider {
 
 	public state: State = {} as State;
+	private stateReceived = false;
+	public settingsWatcher: vscode.FileSystemWatcher;
+	public settings: Settings | null = null;
 
 	public static readonly viewType = 'ngnouns.nounView';
 
@@ -81,7 +84,25 @@ class NounViewProvider implements vscode.WebviewViewProvider {
 		private logChannel: vscode.OutputChannel,
 	) {
 		this.logChannel.appendLine( 'Constructor is run on view provider' );
+		this.settingsWatcher = vscode.workspace.createFileSystemWatcher( '**/ng-nouns.json' );
+		this.initiateSettingsWatcher();
 	}
+
+	private initiateSettingsWatcher = async () => {
+		this.settingsWatcher.onDidChange( this.settingsFileChanged );
+		this.settingsWatcher.onDidCreate( this.settingsFileChanged );
+		this.settingsWatcher.onDidDelete( this.settingsFileChanged );
+		this.settingsFileChanged();
+	};
+
+	private settingsFileChanged = async () => {
+		for ( const settingFileUri of ( await vscode.workspace.findFiles( '**/ng-nouns.json' ) ) ) {
+			// this.log( 'Settings file found' );
+			const fileContent = await vscode.workspace.fs.readFile( settingFileUri );
+			this.settings = JSON.parse( fileContent.toString() );
+		}
+		await this.sendState();
+	};
 
 	public resolveWebviewView (
 		webviewView: vscode.WebviewView,
@@ -190,12 +211,18 @@ class NounViewProvider implements vscode.WebviewViewProvider {
 	};
 
 	public sendState = async () => {
+		while ( !this.stateReceived ) {
+			await waiter();
+		}
+		if ( this.settings ) { this.state.settings = this.settings; }
 		this._view?.webview.postMessage( { type: 'stateUpdate', state: this.state } );
 	};
 
 	public receiveState = async ( payload: State, shouldEcho = false ) => {
 		this.state = JSON.parse( JSON.stringify( payload ) );
+		this.log( this.state );
 		if ( shouldEcho ) { await this.sendState(); }
+		this.stateReceived = true;
 	};
 
 	private _getHtmlForWebview = ( webview: vscode.Webview ) => {
@@ -206,8 +233,6 @@ class NounViewProvider implements vscode.WebviewViewProvider {
 
 		const styleResetUri = webview.asWebviewUri( vscode.Uri.joinPath( this._extensionUri, 'media', 'reset.css' ) );
 		const styleBulmaUri = webview.asWebviewUri( vscode.Uri.joinPath( this._extensionUri, 'media', 'bulma.css' ) );
-
-		this.log( styleBulmaUri );
 
 		const nonce = uuid();
 
@@ -9230,4 +9255,12 @@ const searchResultDummy = {
 			"year": 2015
 		}
 	]
+};
+
+export const waiter = ( duration = 1000 ): Promise<void> => {
+	return new Promise( resolve => {
+		setTimeout( () => {
+			resolve();
+		}, duration );
+	} );
 };

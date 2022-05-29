@@ -14,6 +14,7 @@ const runAtStart = () => {
 
 	state = vscode.getState() || state;
 	checkCredentials();
+	log( 'Sending State' );
 	sendState();
 
 	window.addEventListener( 'message', event => {
@@ -88,6 +89,7 @@ const clearCredentials = async () => {
 };
 
 const receiveState = async ( payload ) => {
+	log( 'State Update Received' );
 	vscode.setState( payload );
 	state = payload;
 };
