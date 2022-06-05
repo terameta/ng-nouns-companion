@@ -12,11 +12,6 @@ let state = { credentials: { key: '', secret: '' } };
 
 const runAtStart = () => {
 
-	state = vscode.getState() || state;
-	checkCredentials();
-	log( 'Sending State' );
-	sendState();
-
 	window.addEventListener( 'message', event => {
 		const message = event.data;
 		// vscode.postMessage( { type: 'logAppend', log: JSON.stringify( message ) } );
@@ -38,9 +33,13 @@ const runAtStart = () => {
 	document.querySelector( '#buttonClearCredentials' ).addEventListener( 'click', clearCredentials );
 	document.querySelector( '#buttonTNPCredentialsSubmit' ).addEventListener( 'click', saveCredentials );
 	document.querySelector( '#buttonSearchSVG' ).addEventListener( 'click', search );
+
+	vscode.postMessage( { type: 'askState' } );
 };
 
 const checkCredentials = async () => {
+	log( 'KEY:' + state.credentials.key );
+	log( 'SECRET:' + state.credentials.secret );
 	if ( !!state.credentials.key && !!state.credentials.secret ) {
 		document.querySelector( '#credentialPending' ).className = 'is-hidden';
 		document.querySelector( '#credentialActive' ).className = '';
@@ -75,28 +74,29 @@ const searchResult = async ( payload ) => {
 const saveCredentials = async () => {
 	const key = document.querySelector( '#apiCredKey' ).value;
 	const secret = document.querySelector( '#apiCredSecret' ).value;
-	// vscode.postMessage( { type: 'saveCredentials', values: { key, secret } } );
-	state.credentials = { key, secret };
-	await checkCredentials();
-	await sendState();
+	vscode.postMessage( { type: 'credentialSave', values: { key, secret } } );
 };
 
 const clearCredentials = async () => {
-	vscode.postMessage( { type: 'clearCredentials' } );
-	state.credentials = { key: '', secret: '' };
-	await checkCredentials();
-	await sendState();
+	log( 'Clear credentials sending' );
+	vscode.postMessage( { type: 'credentialClear' } );
 };
 
 const receiveState = async ( payload ) => {
-	log( 'State Update Received' );
-	vscode.setState( payload );
+	log( 'State Received' );
 	state = payload;
+	await checkCredentials();
+	await updateIconList();
 };
 
-const sendState = async () => {
-	vscode.setState( state );
-	vscode.postMessage( { type: 'stateUpdate', state } );
+const updateIconList = async () => {
+	const iconListDiv = document.querySelector( '#icon-list' );
+	for ( const icon of state.icons ) {
+		const iconDiv = document.createElement( 'div' );
+		iconDiv.className = 'box';
+		iconDiv.innerHTML = icon.data;
+		iconListDiv.appendChild( iconDiv );
+	}
 };
 
 runAtStart();

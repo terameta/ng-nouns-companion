@@ -16,9 +16,15 @@ export type Settings = {
 	iconFile: string,
 };
 
+export type Icon = {
+	name: string,
+	data: string,
+};
+
 export type State = {
 	credentials: Credentials,
 	settings: Settings,
+	icons: Icon[],
 };
 
 // this method is called when your extension is activated
@@ -34,7 +40,7 @@ export async function activate ( context: vscode.ExtensionContext ) {
 	// This is how to show notification
 	// vscode.window.showInformationMessage( 'Extension enabled' );
 
-	const provider = new NounViewProvider( context.extensionUri, logChannel );
+	const provider = new NounViewProvider( context.extensionUri, logChannel, context );
 
 	context.subscriptions.push(
 		vscode.window.registerWebviewViewProvider( NounViewProvider.viewType, provider )
@@ -71,9 +77,9 @@ export async function activate ( context: vscode.ExtensionContext ) {
 class NounViewProvider implements vscode.WebviewViewProvider {
 
 	public state: State = {} as State;
-	private stateReceived = false;
 	public settingsWatcher: vscode.FileSystemWatcher;
 	public settings: Settings | null = null;
+	public icons: Icon[] | null = null;
 
 	public static readonly viewType = 'ngnouns.nounView';
 
@@ -82,13 +88,20 @@ class NounViewProvider implements vscode.WebviewViewProvider {
 	constructor(
 		private readonly _extensionUri: vscode.Uri,
 		private logChannel: vscode.OutputChannel,
+		private context: vscode.ExtensionContext,
 	) {
 		this.logChannel.appendLine( 'Constructor is run on view provider' );
 		this.settingsWatcher = vscode.workspace.createFileSystemWatcher( '**/ng-nouns.json' );
-		this.initiateSettingsWatcher();
+		this.initialize();
 	}
 
-	private initiateSettingsWatcher = async () => {
+	private initialize = async () => {
+		this.state.credentials = { key: '', secret: '' };
+		const savedKey = await this.context.secrets.get( 'nn-icons-key' );
+		if ( savedKey ) { this.state.credentials.key = savedKey; }
+		const savedSecret = await this.context.secrets.get( 'nn-icons-secret' );
+		if ( savedSecret ) { this.state.credentials.secret = savedSecret; }
+
 		this.settingsWatcher.onDidChange( this.settingsFileChanged );
 		this.settingsWatcher.onDidCreate( this.settingsFileChanged );
 		this.settingsWatcher.onDidDelete( this.settingsFileChanged );
@@ -101,7 +114,32 @@ class NounViewProvider implements vscode.WebviewViewProvider {
 			const fileContent = await vscode.workspace.fs.readFile( settingFileUri );
 			this.settings = JSON.parse( fileContent.toString() );
 		}
-		await this.sendState();
+		if ( this.settings?.iconFile ) {
+			let iconFilePath = '';
+			if ( vscode.workspace.workspaceFolders ) {
+				iconFilePath += vscode.workspace.workspaceFolders[ 0 ].uri.fsPath;
+				iconFilePath += '/';
+			}
+			iconFilePath += this.settings.iconFile;
+			this.log( 'Trying to read iconFile' );
+			let iconListText = '';
+			try {
+				// const iconListText = await vscode.workspace.fs.readFile( vscode.Uri.file( this.settings.iconFile ) );
+				iconListText = ( await vscode.workspace.fs.readFile( vscode.Uri.file( iconFilePath ) ) ).toString();
+				this.icons = iconListText.split( 'export ' ).
+					filter( ( e: string ) => e.startsWith( 'const' ) ).
+					map( ( e: string ) => e.trim() ).
+					map( ( e: string ) => e.split( ' = ' )[ 1 ].trim() ).
+					map( e => e.endsWith( ';' ) ? e.slice( 0, -1 ) : e ).
+					map( e => JSON.parse( e ) ).
+					sort( ( a, b ) => a.name > b.name ? 1 : -1 );
+				this.state.icons = this.icons;
+				this.log( 'IconFile is read' );
+			} catch ( error ) {
+				this.log( 'Couldnt read the file' );
+				this.log( error );
+			}
+		}
 	};
 
 	public resolveWebviewView (
@@ -126,19 +164,43 @@ class NounViewProvider implements vscode.WebviewViewProvider {
 					this.logChannel.appendLine( '>>>' + data.log );
 					break;
 				}
-				case 'stateUpdate': {
-					this.log( 'State Update Received' );
-					await this.receiveState( data.state, data.shouldEcho );
-					break;
-				}
 				case 'search': {
 					this.log( 'Search Received' );
 					await this.search( data.query );
 					break;
 				}
+				case 'credentialSave': {
+					this.log( 'Credentials Received' );
+					await this.credentialSave( data.values );
+					break;
+				}
+				case 'credentialClear': {
+					this.log( 'Credential Clear Received' );
+					await this.credentialClear();
+					break;
+				}
+				case 'askState': {
+					this.log( 'Ask State Received' );
+					this.sendState();
+					break;
+				}
 			}
 		} );
 	}
+
+	public credentialSave = async ( payload: Credentials ) => {
+		await this.context.secrets.store( 'nn-icons-key', payload.key );
+		await this.context.secrets.store( 'nn-icons-secret', payload.secret );
+		this.state.credentials = { key: payload.key, secret: payload.secret };
+		await this.sendState();
+	};
+
+	public credentialClear = async () => {
+		await this.context.secrets.store( 'nn-icons-key', '' );
+		await this.context.secrets.store( 'nn-icons-secret', '' );
+		this.state.credentials = { key: '', secret: '' };
+		await this.sendState();
+	};
 
 	public search = async ( payload: string ) => {
 		// // this.log( 'Sending request' );
@@ -211,19 +273,21 @@ class NounViewProvider implements vscode.WebviewViewProvider {
 	};
 
 	public sendState = async () => {
-		while ( !this.stateReceived ) {
-			await waiter();
-		}
 		if ( this.settings ) { this.state.settings = this.settings; }
+		if ( this.icons ) { this.state.icons = this.icons; }
+		await this.settingsFileChanged();
 		this._view?.webview.postMessage( { type: 'stateUpdate', state: this.state } );
 	};
 
-	public receiveState = async ( payload: State, shouldEcho = false ) => {
-		this.state = JSON.parse( JSON.stringify( payload ) );
-		this.log( this.state );
-		if ( shouldEcho ) { await this.sendState(); }
-		this.stateReceived = true;
-	};
+	// public receiveState = async ( payload: State, shouldEcho = false ) => {
+	// 	this.state = JSON.parse( JSON.stringify( payload ) );
+	// 	if ( this.settings ) { this.state.settings = this.settings; }
+	// 	if ( this.icons ) { this.state.icons = this.icons; }
+	// 	this.settingsFileChanged();
+	// 	this.log( this.state );
+	// 	if ( shouldEcho ) { await this.sendState(); }
+	// 	this.stateReceived = true;
+	// };
 
 	private _getHtmlForWebview = ( webview: vscode.Webview ) => {
 
