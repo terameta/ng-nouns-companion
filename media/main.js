@@ -10,6 +10,8 @@ const log = ( payload ) => {
 
 let state = { credentials: { key: '', secret: '' } };
 
+let currentSearchPhrase = '';
+
 const runAtStart = () => {
 
 	window.addEventListener( 'message', event => {
@@ -52,9 +54,16 @@ const checkCredentials = async () => {
 const search = async () => {
 	// const response = await fetch( 'https://reqres.in/api/users?page=2' );
 	// const data = await response.json();
+	const searcher = document.querySelector( '#inputSearchRemote' );
 	const iconList = document.querySelector( '#icon-list' );
-	iconList.textContent = 'Searching, please wait';
-	vscode.postMessage( { type: 'search', query: 'users' } );
+	log( searcher.value );
+	if ( searcher && searcher.value && typeof searcher.value === 'string' && searcher.value.length >= 1 ) {
+		currentSearchPhrase = searcher.value;
+		iconList.textContent = 'Searching, please wait';
+		vscode.postMessage( { type: 'search', query: searcher.value } );
+	} else {
+		iconList.textContent = 'Please enter a value at least 1 character long';
+	}
 };
 
 const searchResult = async ( payload ) => {
@@ -64,11 +73,42 @@ const searchResult = async ( payload ) => {
 	for ( const icon of icons ) {
 		const iconDiv = document.createElement( 'div' );
 		iconDiv.className = 'box';
-		iconDiv.innerHTML = `<img src="${ icon.preview_url_84 }" />`;
+		const iconImg = document.createElement( 'img' );
+		iconImg.src = icon.preview_url_84;
+		log( icon.preview_url_84 );
+		log( iconImg.src );
+		iconImg.width = '16';
+		iconImg.height = '16';
+		iconImg.className = 'mr-2';
+		const iconNameBox = document.createElement( 'input' );
+		iconNameBox.type = 'text';
+		iconNameBox.id = `icon${ icon.id }name`;
+		iconNameBox.value = currentSearchPhrase;
+		iconNameBox.className = 'mr-2';
+		const iconBtn = document.createElement( 'button' );
+		iconBtn.innerHTML = 'Save';
+		iconBtn.addEventListener( 'click', () => { downloadIcon( icon ); } );
+		// iconDiv.innerHTML = `<img src="${ icon.preview_url_84 }" width="16px" height="16px" class="mr-2" />`;
+		// iconDiv.innerHTML += `<input type="text" id="icon${ icon.id }name" value="${ currentSearchPhrase }" class="mr-2">`;
+		// iconDiv.innerHTML += `<button type="button" onclick="downloadIcon(${ icon.id })">Save</button>`;
+		iconDiv.appendChild( iconImg );
+		iconDiv.appendChild( iconNameBox );
+		iconDiv.appendChild( iconBtn );
+		// iconDiv.addEventListener( 'click', () => {
+		// 	downloadIcon( icon.id );
+		// } );
 		iconListDiv.appendChild( iconDiv );
-		// log( icon.id );
+		// log( icon );
 	}
+	log( 'We received this many icons:' + icons.length );
 	// log( icons.length + '<<<<<' );
+};
+
+const downloadIcon = async ( payload ) => {
+	// log( payload );
+	const nameInput = document.querySelector( `#icon${ payload.id }name` );
+	// log( nameInput.value );
+	vscode.postMessage( { type: 'downloadButton', values: { saveName: nameInput.value, icon: payload } } );
 };
 
 const saveCredentials = async () => {
@@ -91,11 +131,20 @@ const receiveState = async ( payload ) => {
 
 const updateIconList = async () => {
 	const iconListDiv = document.querySelector( '#icon-list' );
+	iconListDiv.innerHTML = '';
+	const iconListUL = document.createElement( 'ul' );
+	iconListDiv.appendChild( iconListUL );
 	for ( const icon of state.icons ) {
-		const iconDiv = document.createElement( 'div' );
+		const iconDiv = document.createElement( 'li' );
 		iconDiv.className = 'box';
 		iconDiv.innerHTML = icon.data;
-		iconListDiv.appendChild( iconDiv );
+		iconDiv.innerHTML += icon.name;
+		iconListUL.appendChild( iconDiv );
+		const svgElem = iconDiv.querySelector( 'svg' );
+		svgElem.style.width = '1rem';
+		svgElem.style.height = '1rem';
+		svgElem.style.border = '1px solid black';
+		svgElem.style.marginRight = '1rem';
 	}
 };
 

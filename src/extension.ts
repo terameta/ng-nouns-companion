@@ -27,6 +27,38 @@ export type State = {
 	icons: Icon[],
 };
 
+export type TNPIcon = {
+	attribution: string,
+	collections: string[],
+	date_uploaded: string, // "2013-02-19"
+	icon_url: string,
+	id: string,
+	is_active: string, // "1"
+	is_explicit: string, // "0"
+	license_description: string, // "public-domain", 
+	nounji_free: string, // "0"
+	permalink: string, // "/term/user/11871",
+	preview_url: string, // "https://static.thenounproject.com/png/11871-200.png",
+	preview_url_42: string, // "https://static.thenounproject.com/png/11871-42.png",
+	preview_url_84: string, // "https://static.thenounproject.com/png/11871-84.png",
+	sponsor: any,
+	sponsor_campaign_link: any,
+	sponsor_id: string, // "",
+	tags: { id: number, slug: string }[],
+	term: string, // "User",
+	term_id: number, // 445,
+	term_slug: string, // "user",
+	updated_at: string, // "2019-04-22 19:22:17",
+	uploader: {
+		location: string, // "Carolina Beach, North Carolina, US",
+		name: string, // "Dirk Rowe",
+		permalink: string, // "/dirk.austin.7",
+		username: string, // "dirk.austin.7"
+	},
+	uploader_id: string, // "14056",
+	year: number, // 2012
+};
+
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 export async function activate ( context: vscode.ExtensionContext ) {
@@ -184,6 +216,11 @@ class NounViewProvider implements vscode.WebviewViewProvider {
 					this.sendState();
 					break;
 				}
+				case 'downloadButton': {
+					this.log( 'Download Button Received' );
+					this.downloadButton( data.values );
+					break;
+				}
 			}
 		} );
 	}
@@ -202,13 +239,55 @@ class NounViewProvider implements vscode.WebviewViewProvider {
 		await this.sendState();
 	};
 
+	public helpOAuth = ( request: any ) => {
+		this.log( 'AAA1' );
+		this.log( request );
+		const { key, secret } = this.state.credentials;
+		this.log( 'AAA2' );
+		const oauth = oauth1a( {
+			consumer: { key, secret },
+			signature_method: 'HMAC-SHA1',
+			hash_function ( base_string: any, key: string ) {
+				return crypto
+					.createHmac( 'sha1', key )
+					.update( base_string )
+					.digest( 'base64' );
+			},
+		} );
+
+		this.log( 'AAA3' );
+		const authorization = oauth.authorize( request );
+		this.log( 'AAA4' );
+		const authHeader = oauth.toHeader( authorization );
+		this.log( 'AAA5' );
+
+		return authHeader;
+	};
+
+	public downloadButton = async ( payload: { saveName: string, icon: TNPIcon } ) => {
+		this.log( payload );
+		const request = {
+			url: payload.icon.icon_url,
+			method: 'GET'
+		};
+
+		try {
+			this.log( 'We will now start' );
+			const headers = this.helpOAuth( request );
+			this.log( headers );
+
+			const { data, status } = await axios.get( request.url, { headers } );
+			this.log( data );
+			this.log( status );
+		} catch ( error ) {
+			this.log( 'error' );
+			this.log( '=================================' );
+			this.log( error );
+		}
+
+	};
+
 	public search = async ( payload: string ) => {
-		// // this.log( 'Sending request' );
-		// // const { data, status } = await axios.get( 'https://reqres.in/api/users?page=2' );
-		// // this.log( '=================================' );
-		// // this.log( status );
-		// // this.log( '=================================' );
-		// // this.log( data );
 		// const { key, secret } = this.state.credentials;
 		// const oauth = oauth1a( {
 		// 	consumer: { key, secret },
@@ -221,47 +300,49 @@ class NounViewProvider implements vscode.WebviewViewProvider {
 		// 	},
 		// } );
 
-		// const request = {
-		// 	url: `https://api.thenounproject.com/icons/${ payload }`,
-		// 	method: 'GET'
-		// };
+		const request = {
+			url: `https://api.thenounproject.com/icons/${ encodeURIComponent( payload ) }?limit_to_public_domain=1&limit=1000`,
+			method: 'GET'
+		};
 
 		// const authorization = oauth.authorize( request );
 		// const authHeader = oauth.toHeader( authorization );
+		const authHeader = this.helpOAuth( request );
 
-		// try {
-		// 	this.log( 'Authorization' );
-		// 	this.log( '=================================' );
-		// 	this.log( authorization );
+		try {
+			// this.log( 'Authorization' );
+			// this.log( '=================================' );
+			// this.log( authorization );
 
-		// 	this.log( 'Auth Header' );
-		// 	this.log( '=================================' );
-		// 	this.log( authHeader );
+			// this.log( 'Auth Header' );
+			// this.log( '=================================' );
+			// this.log( authHeader );
 
-		// 	this.log( 'State' );
-		// 	this.log( '=================================' );
-		// 	this.log( this.state );
-		// 	const { data, status } = await axios.get( request.url, { headers: authHeader } );
-		// 	// const data: any = await response.json();
-		// 	this.log( 'Payload' );
-		// 	this.log( '=================================' );
-		// 	this.log( payload );
-		// 	this.log( 'Request.url' );
-		// 	this.log( '=================================' );
-		// 	this.log( request.url );
-		// 	this.log( 'status' );
-		// 	this.log( '=================================' );
-		// 	this.log( status );
-		// 	this.log( 'data' );
-		// 	this.log( '=================================' );
-		// 	this.log( data );
-		// } catch ( error ) {
-		// 	this.log( 'error' );
-		// 	this.log( '=================================' );
-		// 	// this.log( error );
-		// 	console.error( error );
-		// }
-		this._view?.webview.postMessage( { type: 'searchResult', result: searchResultDummy } );
+			// this.log( 'State' );
+			// this.log( '=================================' );
+			// this.log( this.state );
+			const { data, status } = await axios.get( request.url, { headers: authHeader } );
+			// // const data: any = await response.json();
+			// this.log( 'Payload' );
+			// this.log( '=================================' );
+			// this.log( payload );
+			// this.log( 'Request.url' );
+			// this.log( '=================================' );
+			// this.log( request.url );
+			// this.log( 'status' );
+			// this.log( '=================================' );
+			// this.log( status );
+			// this.log( '=================================' );
+			// this.log( 'data is being sent' );
+			// // this.log( data );
+			this._view?.webview.postMessage( { type: 'searchResult', result: data } );
+			// this._view?.webview.postMessage( { type: 'searchResult', result: searchResultDummy } );
+		} catch ( error: any ) {
+			this.log( 'error' );
+			this.log( '=================================' );
+			this.log( error );
+			vscode.window.showErrorMessage( error.message || 'Failure on search, please check credentials' );
+		}
 	};
 
 	public log = ( payload: any ) => {
@@ -278,16 +359,6 @@ class NounViewProvider implements vscode.WebviewViewProvider {
 		await this.settingsFileChanged();
 		this._view?.webview.postMessage( { type: 'stateUpdate', state: this.state } );
 	};
-
-	// public receiveState = async ( payload: State, shouldEcho = false ) => {
-	// 	this.state = JSON.parse( JSON.stringify( payload ) );
-	// 	if ( this.settings ) { this.state.settings = this.settings; }
-	// 	if ( this.icons ) { this.state.icons = this.icons; }
-	// 	this.settingsFileChanged();
-	// 	this.log( this.state );
-	// 	if ( shouldEcho ) { await this.sendState(); }
-	// 	this.stateReceived = true;
-	// };
 
 	private _getHtmlForWebview = ( webview: vscode.Webview ) => {
 
@@ -348,7 +419,7 @@ class NounViewProvider implements vscode.WebviewViewProvider {
 					</div>
 					<div class="field is-horizontal">
 						<div class="field-label is-normal"><label class="label">Search SVG</label></div>
-						<div class="field-body"><div class="field"><p class="control"><input class="input is-small is-fullwidth" type="text" id="searchBox"></p></div></div>
+						<div class="field-body"><div class="field"><p class="control"><input class="input is-small is-fullwidth" type="text" id="inputSearchRemote"></p></div></div>
 					</div>
 					<button id="buttonSearchSVG" class="ml-auto">Search</button>
 				</div>
@@ -365,7 +436,6 @@ class NounViewProvider implements vscode.WebviewViewProvider {
 
 // this method is called when your extension is deactivated
 export function deactivate () { }
-
 
 const searchResultDummy = {
 	"generated_at": "Sun, 29 May 2022 08:43:04 GMT",
