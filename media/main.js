@@ -80,6 +80,8 @@ const searchResult = async ( payload ) => {
 		iconImg.width = '16';
 		iconImg.height = '16';
 		iconImg.className = 'mr-2';
+		const iconNameLabel = document.createElement( 'label' );
+		iconNameLabel.innerHTML = 'Icon Name';
 		const iconNameBox = document.createElement( 'input' );
 		iconNameBox.type = 'text';
 		iconNameBox.id = `icon${ icon.id }name`;
@@ -92,6 +94,7 @@ const searchResult = async ( payload ) => {
 		// iconDiv.innerHTML += `<input type="text" id="icon${ icon.id }name" value="${ currentSearchPhrase }" class="mr-2">`;
 		// iconDiv.innerHTML += `<button type="button" onclick="downloadIcon(${ icon.id })">Save</button>`;
 		iconDiv.appendChild( iconImg );
+		iconDiv.appendChild( iconNameLabel );
 		iconDiv.appendChild( iconNameBox );
 		iconDiv.appendChild( iconBtn );
 		// iconDiv.addEventListener( 'click', () => {

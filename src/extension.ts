@@ -6,6 +6,7 @@ import { v4 as uuid } from 'uuid';
 import crypto = require( 'crypto' );
 const oauth1a = require( 'oauth-1.0a' );
 import axios from 'axios';
+import { optimize } from 'svgo';
 
 export type Credentials = {
 	key: string,
@@ -112,6 +113,7 @@ class NounViewProvider implements vscode.WebviewViewProvider {
 	public settingsWatcher: vscode.FileSystemWatcher;
 	public settings: Settings | null = null;
 	public icons: Icon[] | null = null;
+	public iconFilePath: string | null = null;
 
 	public static readonly viewType = 'ngnouns.nounView';
 
@@ -167,6 +169,7 @@ class NounViewProvider implements vscode.WebviewViewProvider {
 					sort( ( a, b ) => a.name > b.name ? 1 : -1 );
 				this.state.icons = this.icons;
 				this.log( 'IconFile is read' );
+				this.iconFilePath = iconFilePath;
 			} catch ( error ) {
 				this.log( 'Couldnt read the file' );
 				this.log( error );
@@ -240,10 +243,7 @@ class NounViewProvider implements vscode.WebviewViewProvider {
 	};
 
 	public helpOAuth = ( request: any ) => {
-		this.log( 'AAA1' );
-		this.log( request );
 		const { key, secret } = this.state.credentials;
-		this.log( 'AAA2' );
 		const oauth = oauth1a( {
 			consumer: { key, secret },
 			signature_method: 'HMAC-SHA1',
@@ -254,14 +254,16 @@ class NounViewProvider implements vscode.WebviewViewProvider {
 					.digest( 'base64' );
 			},
 		} );
-
-		this.log( 'AAA3' );
 		const authorization = oauth.authorize( request );
-		this.log( 'AAA4' );
-		const authHeader = oauth.toHeader( authorization );
-		this.log( 'AAA5' );
+		return oauth.toHeader( authorization );
+	};
 
-		return authHeader;
+	public nameConverter = ( saveName: string ) => {
+		const morphed = saveName.trim().split( ' ' ).map( word => word.charAt( 0 ).toUpperCase() + word.slice( 1 ) ).join( '' );
+		return {
+			nniname: 'nni' + morphed,
+			iname: morphed.charAt( 0 ).toLowerCase() + morphed.slice( 1 )
+		};
 	};
 
 	public downloadButton = async ( payload: { saveName: string, icon: TNPIcon } ) => {
@@ -278,6 +280,20 @@ class NounViewProvider implements vscode.WebviewViewProvider {
 
 			const { data, status } = await axios.get( request.url, { headers } );
 			this.log( data );
+			this.log( '===' + data.length + '===' );
+			const optimized = optimize( data );
+			if ( !optimized.error ) {
+				this.log( '===' + ( optimized as any ).data.length + '===' );
+				// TODO continue from here
+				// let existingTextContent = ( await vscode.workspace.fs.readFile( vscode.Uri.file( this.iconFilePath! ) ) ).toString();
+				// existingTextContent += '\n';
+				// const nts = payload.saveName.toLowerCase().replace(/ /g, '');
+				// line above will be optimized using nameConverter function, this function is ready
+				// existingTextContent += `export const `
+				// await vscode.workspace.fs.writeFile( vscode.Uri.file( this.iconFilePath ), );
+			} else {
+				vscode.window.showErrorMessage( optimized.error || 'Failure to save optimized SVG' );
+			}
 			this.log( status );
 		} catch ( error ) {
 			this.log( 'error' );
