@@ -12,6 +12,9 @@ let state = { credentials: { key: '', secret: '' } };
 
 let currentSearchPhrase = '';
 
+let mainTabListDE;
+let mainTabListCC;
+
 const runAtStart = () => {
 
 	window.addEventListener( 'message', event => {
@@ -37,11 +40,49 @@ const runAtStart = () => {
 	document.querySelector( '#buttonSearchSVG' ).addEventListener( 'click', search );
 
 	vscode.postMessage( { type: 'askState' } );
+
+	mainTabListDE = document.querySelectorAll( '.tabli' );
+	mainTabListCC = document.querySelectorAll( '.tabcc' );
+
+	prepareTabLIs();
+
+	activateTab( 'tcc-e' );
+	// activateTab('tabLabelExisting');
+};
+
+const prepareTabLIs = () => {
+	for ( const node of mainTabListDE ) {
+		if ( node.className.indexOf( 'tcc-e' ) >= 0 ) {
+			node.addEventListener( 'click', () => { activateTab( 'tcc-e' ); } );
+		}
+		if ( node.className.indexOf( 'tcc-s' ) >= 0 ) {
+			node.addEventListener( 'click', () => { activateTab( 'tcc-s' ); } );
+		}
+		if ( node.className.indexOf( 'tcc-c' ) >= 0 ) {
+			node.addEventListener( 'click', () => { activateTab( 'tcc-c' ); } );
+		}
+	}
+};
+
+const activateTab = ( tabId ) => {
+	for ( const node of mainTabListDE ) {
+		if ( node.className.indexOf( tabId ) >= 0 ) {
+			node.classList.add( 'is-active' );
+		} else {
+			node.classList.remove( 'is-active' );
+		}
+	}
+
+	for ( const node of mainTabListCC ) {
+		if ( node.className.indexOf( tabId ) >= 0 ) {
+			node.classList.remove( 'is-hidden' );
+		} else {
+			node.classList.add( 'is-hidden' );
+		}
+	}
 };
 
 const checkCredentials = async () => {
-	log( 'KEY:' + state.credentials.key );
-	log( 'SECRET:' + state.credentials.secret );
 	if ( !!state.credentials.key && !!state.credentials.secret ) {
 		document.querySelector( '#credentialPending' ).className = 'is-hidden';
 		document.querySelector( '#credentialActive' ).className = '';
@@ -73,6 +114,9 @@ const searchResult = async ( payload ) => {
 	for ( const icon of icons ) {
 		const iconDiv = document.createElement( 'div' );
 		iconDiv.className = 'box';
+		iconDiv.classList.add( 'is-small' );
+		iconDiv.classList.add( 'py-2' );
+		iconDiv.classList.add( 'my-1' );
 		const iconImg = document.createElement( 'img' );
 		iconImg.src = icon.preview_url_84;
 		log( icon.preview_url_84 );
@@ -133,22 +177,29 @@ const receiveState = async ( payload ) => {
 };
 
 const updateIconList = async () => {
-	const iconListDiv = document.querySelector( '#icon-list' );
+	const iconListDiv = document.querySelector( '#existing-icons' );
 	iconListDiv.innerHTML = '';
 	const iconListUL = document.createElement( 'ul' );
 	iconListDiv.appendChild( iconListUL );
 	for ( const icon of state.icons ) {
 		const iconDiv = document.createElement( 'li' );
 		iconDiv.className = 'box';
+		iconDiv.classList.add( 'is-small' );
+		iconDiv.classList.add( 'py-2' );
+		iconDiv.classList.add( 'my-1' );
 		iconDiv.innerHTML = icon.data;
 		iconDiv.innerHTML += icon.name;
 		iconListUL.appendChild( iconDiv );
 		const svgElem = iconDiv.querySelector( 'svg' );
 		svgElem.style.width = '1rem';
 		svgElem.style.height = '1rem';
-		svgElem.style.border = '1px solid black';
+		// svgElem.style.border = '1px solid black';
 		svgElem.style.marginRight = '1rem';
 	}
+};
+
+const activateCredentials = () => {
+	log( 'Credential activation requested' );
 };
 
 runAtStart();

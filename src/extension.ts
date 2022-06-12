@@ -6,7 +6,8 @@ import { v4 as uuid } from 'uuid';
 import crypto = require( 'crypto' );
 const oauth1a = require( 'oauth-1.0a' );
 import axios from 'axios';
-import { optimize } from 'svgo';
+import { optimize, OptimizedSvg } from 'svgo';
+import { TextEncoder } from 'util';
 
 export type Credentials = {
 	key: string,
@@ -20,6 +21,7 @@ export type Settings = {
 export type Icon = {
 	name: string,
 	data: string,
+	attribution?: string,
 };
 
 export type State = {
@@ -266,6 +268,11 @@ class NounViewProvider implements vscode.WebviewViewProvider {
 		};
 	};
 
+	public name2nniName = ( name: string ) => {
+		const morphed = name.trim().split( ' ' ).map( word => word.charAt( 0 ).toUpperCase() + word.slice( 1 ) ).join( '' );
+		return 'nni' + morphed;
+	};
+
 	public downloadButton = async ( payload: { saveName: string, icon: TNPIcon } ) => {
 		this.log( payload );
 		const request = {
@@ -274,23 +281,25 @@ class NounViewProvider implements vscode.WebviewViewProvider {
 		};
 
 		try {
-			this.log( 'We will now start' );
 			const headers = this.helpOAuth( request );
-			this.log( headers );
 
 			const { data, status } = await axios.get( request.url, { headers } );
-			this.log( data );
-			this.log( '===' + data.length + '===' );
-			const optimized = optimize( data );
+			const optimized = optimize( data ) as OptimizedSvg;
 			if ( !optimized.error ) {
-				this.log( '===' + ( optimized as any ).data.length + '===' );
-				// TODO continue from here
 				// let existingTextContent = ( await vscode.workspace.fs.readFile( vscode.Uri.file( this.iconFilePath! ) ) ).toString();
-				// existingTextContent += '\n';
-				// const nts = payload.saveName.toLowerCase().replace(/ /g, '');
-				// line above will be optimized using nameConverter function, this function is ready
-				// existingTextContent += `export const `
-				// await vscode.workspace.fs.writeFile( vscode.Uri.file( this.iconFilePath ), );
+				let toWrite = '';
+				const nts = this.nameConverter( payload.saveName );
+				const toSavePL = { name: nts.iname, data: optimized.data, attribution: payload.icon.attribution };
+				this.state.icons.push( toSavePL );
+				this.state.icons.sort( ( a, b ) => ( a.name > b.name ? 1 : -1 ) );
+				for ( const icon of this.state.icons ) {
+					toWrite += `export const ${ this.name2nniName( icon.name ) }: Icon = ${ JSON.stringify( icon ) };\n`;
+				}
+				toWrite += 'export interface Icon { name: icon; data: string; attribution?: string; }\n';
+				const toType = this.state.icons.map( i => `'${ i.name }'` ).join( ' | ' );
+				toWrite += `export type icon = ${ toType };`;
+				const enc = new TextEncoder();
+				await vscode.workspace.fs.writeFile( vscode.Uri.file( this.iconFilePath! ), enc.encode( toWrite ) );
 			} else {
 				vscode.window.showErrorMessage( optimized.error || 'Failure to save optimized SVG' );
 			}
@@ -407,42 +416,57 @@ class NounViewProvider implements vscode.WebviewViewProvider {
 				<title>Angular Nouns</title>
 			</head>
 			<body>
-				<div class="container is-fluid pt-4" id="credentialPending">
-					<article class="panel is-primary">
-						<p class="panel-heading">Save The Noun Project API Credentials</p>
-
-						<div class="field is-horizontal">
-							<div class="field-label is-normal"><label class="label">Key</label></div>
-							<div class="field-body"><div class="field"><p class="control"><input class="input is-small is-fullwidth" type="text" id="apiCredKey"></p></div></div>
-						</div>
-
-						<div class="field is-horizontal">
-							<div class="field-label is-normal"><label class="label">Secret</label></div>
-							<div class="field-body"><div class="field"><p class="control"><input class="input is-small is-fullwidth" type="text" id="apiCredSecret"></p></div></div>
-						</div>
-
-						<div class="panel-block">
-							<button class="button is-primary is-small ml-auto" id="buttonTNPCredentialsSubmit">Submit</button>
-						</div>
-					</article>
+				<div class="tabs is-small is-fullwidth">
+					<ul id="mainTabList">
+						<li class="tabli tcc-e"><a>Existing Icons</a></li>
+						<li class="tabli tcc-s"><a>Search New Icon</a></li>
+						<li class="tabli tcc-c"><a>Credentials</a></li>
+					</ul>
 				</div>
 
-				<div class="container is-fluid pt-4" id="credentialActive">
-					<div class="columns">
-						<div class="column">
-							<button id="buttonClearCredentials" class="ml-auto">Clear Credentials</button> 
-						</div>
-					</div>
+				<div class="tabcc tcc-e is-hidden">
+					<!-- This is the existing icons tab content container -->
+					<div id="existing-icons"></div>
+				</div>
+				<div class="tabcc tcc-s is-hidden p-3">
+					<!-- This is the search tab content container -->
 					<div class="field is-horizontal">
 						<div class="field-label is-normal"><label class="label">Search SVG</label></div>
 						<div class="field-body"><div class="field"><p class="control"><input class="input is-small is-fullwidth" type="text" id="inputSearchRemote"></p></div></div>
 					</div>
 					<button id="buttonSearchSVG" class="ml-auto">Search</button>
+					<div id="icon-list"></div>
 				</div>
+				<div class="tabcc tcc-c is-hidden p-3">
+					<!-- This is the credentials tab content container -->
+					<div class="container is-fluid pt-4" id="credentialPending">
+						<article class="panel is-primary">
+							<p class="panel-heading">Save The Noun Project API Credentials</p>
 
-				<hr>
+							<div class="field is-horizontal">
+								<div class="field-label is-normal"><label class="label">Key</label></div>
+								<div class="field-body"><div class="field"><p class="control"><input class="input is-small is-fullwidth" type="text" id="apiCredKey"></p></div></div>
+							</div>
 
-				<div id="icon-list"><div class="box">Gecici</div></div>
+							<div class="field is-horizontal">
+								<div class="field-label is-normal"><label class="label">Secret</label></div>
+								<div class="field-body"><div class="field"><p class="control"><input class="input is-small is-fullwidth" type="text" id="apiCredSecret"></p></div></div>
+							</div>
+
+							<div class="panel-block">
+								<button class="button is-primary is-small ml-auto" id="buttonTNPCredentialsSubmit">Submit</button>
+							</div>
+						</article>
+					</div>
+
+					<div class="container is-fluid pt-4" id="credentialActive">
+						<div class="columns">
+							<div class="column p-3">
+								<button id="buttonClearCredentials" class="ml-auto">Clear Credentials</button> 
+							</div>
+						</div>
+					</div>
+				</div>
 
 				<script nonce="${ nonce }" src="${ scriptUri }"></script>
 			</body>
