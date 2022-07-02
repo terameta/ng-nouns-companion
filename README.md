@@ -39,3 +39,6 @@ Users appreciate release notes as you update your extension.
 
 Initial release of ng-nouns-companion
 
+### 1.0.1
+
+MarketPlace Icon File Updated
