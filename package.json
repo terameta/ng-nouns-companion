@@ -2,6 +2,7 @@
 	"name": "ng-nouns-companion",
 	"displayName": "Angular Nouns Companion",
 	"description": "Companion Extension for Angular Nouns",
+	"repository": "https://github.com/terameta/ng-nouns-companion",
 	"version": "1.0.0",
 	"engines": {
 		"vscode": "^1.67.0"
