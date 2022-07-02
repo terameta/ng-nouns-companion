@@ -20,11 +20,12 @@ The companion can be effectively be used with probably any compatible icon modul
 Settings are required to be saved to the ng-nouns.json file at the root of the repository.  
 Currently there is only one setting, iconFile:  
 
-'''
+
+```
 {
 	"iconFile": "/locationOfTheFileFromRootToSaveTheSVGs/icons.ts"
 }
-'''
+```
 
 ## Known Issues
 
