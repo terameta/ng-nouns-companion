@@ -70,7 +70,7 @@ export async function activate ( context: vscode.ExtensionContext ) {
 
 	logChannel.appendLine( 'Extension enabled' );
 
-	logChannel.show();
+	// logChannel.show();
 
 	// This is how to show notification
 	// vscode.window.showInformationMessage( 'Extension enabled' );

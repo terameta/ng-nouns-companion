@@ -42,3 +42,7 @@ Initial release of ng-nouns-companion
 ### 1.0.1
 
 MarketPlace Icon File Updated
+
+### 1.0.2
+
+Stop showing logs automatically
