@@ -1,35 +1,34 @@
-# ng-nouns-companion README
+# Angular Nouns Module Companion Extension 
 
-This is the README for your extension "ng-nouns-companion". After writing up a brief description, we recommend including the following sections.
+![ngn Icon](https://raw.githubusercontent.com/terameta/ng-nouns-companion/main/src/assets/ng-nouns-companion.png 'ng-nouns')
+
+Angular Nouns is an icon module for Angular projects and aimed at the developers and development teams lacking a designer to create icons for them. This companion extension is created to make the flow complete for the developers.
 
 ## Features
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+Companion module allows you to choose icons from the amazing https://thenounproject.com and add the svg icons as typescript exports in a single file.
 
-For example if there is an image subfolder under your extension project workspace:
-
-\!\[feature X\]\(images/feature-x.png\)
-
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+When used together with the Angular Nouns module <coming soon> it will provide access to the whole repository of icons to the developers with a couple of clicks.
 
 ## Requirements
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+Recommended to be used together with the Angular Nouns module, but it is not a requirement.  
+The companion can be effectively be used with probably any compatible icon module utilizing TypeScript.
 
 ## Extension Settings
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
+Settings are required to be saved to the ng-nouns.json file at the root of the repository.  
+Currently there is only one setting, iconFile:  
 
-For example:
-
-This extension contributes the following settings:
-
-* `myExtension.enable`: enable/disable this extension
-* `myExtension.thing`: set to `blah` to do something
+'''
+{
+	"iconFile": "/locationOfTheFileFromRootToSaveTheSVGs/icons.ts"
+}
+'''
 
 ## Known Issues
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+I have never tested the extension with multi-root workspaces.
 
 ## Release Notes
 
@@ -37,34 +36,5 @@ Users appreciate release notes as you update your extension.
 
 ### 1.0.0
 
-Initial release of ...
+Initial release of ng-nouns-companion
 
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
-
------------------------------------------------------------------------------------------------------------
-## Following extension guidelines
-
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
-
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
-
-## Working with Markdown
-
-**Note:** You can author your README using Visual Studio Code.  Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux)
-* Toggle preview (`Shift+CMD+V` on macOS or `Shift+Ctrl+V` on Windows and Linux)
-* Press `Ctrl+Space` (Windows, Linux) or `Cmd+Space` (macOS) to see a list of Markdown snippets
-
-### For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
